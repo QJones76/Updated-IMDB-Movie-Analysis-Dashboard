@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>IMDB Movie Analysis Dashboard</title>
+  <link rel="stylesheet" href="static/css/styles.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nouislider/distribute/nouislider.min.css">
+    
+  <!-- Adding JS file and d3 library -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <!-- Adding d3 textwrap functionality -->
+  <script src="static/js/textwrap.js"></script>
+  <script src="static/js/app.js"></script>
+</head>
+
+<body>
+  <!-- Top section: Title and filter bar -->
+  <header class="top-of-page">
+    <div class="page-title">
+      <h1>IMDB Movie Analysis Dashboard</h1>
+      <p>Use the interactive charts below to explore the dataset!</p>
+    </div>
+
+    <div class="filter-bar">
+      <div class="dropdown" id="genre-dropdown">
+        <button class="dropdown-button">Select Genre(s)</button>
+        <div class="dropdown-content" id="genre-checkboxes">
+            <!-- Genre checkboxes will be added dynamically here -->
+        </div>
+    </div>
+      <div id="year-range-slider"></div>
+      <span id="year-range-output">2005 - 2025</span>
+    </div>
+  </header>
+
+  <!-- Main content area for charts -->
+  <section class="chart-containers">
+    <div class="top_charts">
+        <div class="chart-container">
+          <div class="chart-header">
+            <h3>Top 50 Movies by Gross Earnings Worldwide</h3>
+            <div class="chart" id="chart1"></div>
+          </div>
+        </div>
+        <div class="chart-container">
+          <div class="chart-header">
+            <h3>Holly's Trivia Treasures</h3>
+            <div class="chart" id="chart2"></div>
+          </div>
+        </div>
+    </div>
+    <div class="bottom_charts">
+      <div class="chart-container">
+        <div class="chart-header">
+          <h3>Top 100 Production Companies by Gross Earnings Worldwide</h3>
+          <div class="chart" id="chart3"></div>
+        </div>
+      </div>
+      <div class="chart-container">
+        <div class="chart-header">
+          <h3>Static Correlation Coefficient Heatmap</h3>
+          <div class="chart" id="chart4"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+  <!-- Implementing noUiSlider -->
+  <script src="https://cdn.jsdelivr.net/npm/nouislider/distribute/nouislider.min.js"></script>
+  <script>
+    let slider = document.getElementById('year-range-slider');
+    noUiSlider.create(slider, {
+      start: [2005, 2025],
+      connect: true,
+      range: { 'min': 2005, 'max': 2025 },
+      step: 1,
+      tooltips: [true, true],
+      format: {
+        to: function (value) { return Math.round(value); },
+        from: function (value) { return Number(value); }
+      }
+    });
+
+    slider.noUiSlider.on('update', function (values) {
+      document.getElementById('year-range-output').innerText = values[0] + ' - ' + values[1];
+    });
+  </script>
+
+
+
+
+
+</body>
+
+</html>
