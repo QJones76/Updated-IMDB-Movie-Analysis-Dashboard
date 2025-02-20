@@ -1,13 +1,9 @@
-// This function is for loading movie data from the csv files and dynamically generating genre checkboxes
+// This function is for loading movie data from the CSV file and dynamically generating genre checkboxes
 function loadMovieData() {
-    // Fetch data from the Flask API endpoints
-    Promise.all([
-        fetch('http://127.0.0.1:5001/get-movies').then(response => response.json()),
-        fetch('http://127.0.0.1:5001/get-heatmap').then(response => response.json())
-    ])
-    .then(([movieDataResponse, heatmapDataResponse]) => {
+    // Load data from the local CSV file using D3.js
+    d3.csv("Data/processed_data.csv").then(data => {
         // Process movie data
-        movieData = movieDataResponse.map(d => ({
+        movieData = data.map(d => ({
             id: d.id,
             title: d.title,
             year: +d.year,
@@ -18,32 +14,27 @@ function loadMovieData() {
             budget: +d.budget,
             gross_ww: +d.gross_world_wide,
             gross_us_canada: +d.gross_us_canada,
-            genres: JSON.parse(d.genres.replace(/'/g, '"'))
+            genres: JSON.parse(d.genres.replace(/'/g, '"')) // Parse genres from string to array
         }));
 
         // Extract unique genres, add them to a new set so repeats don't populate, and sort them alphabetically
-        // IMPORTANT: Look into sorting them by their value_counts()
         let uniqueGenres = [...new Set(movieData.flatMap(movie => movie.genres))].sort();
-        // Look at https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax#spread_in_array_literals
-        // for more on the spread syntax (i.e. the '...')
 
-        // grab the element
+        // Grab the element
         const genreCheckboxContainer = document.getElementById("genre-checkboxes");
 
         // Clear existing checked boxes
         genreCheckboxContainer.innerHTML = "";
 
-        // Create a checkbox for each genre by looping through unique genres and adding HTML elements needed
-        // for checkboxes 
+        // Create a checkbox for each genre by looping through unique genres and adding HTML elements needed for checkboxes 
         uniqueGenres.forEach(genre => {
-
             // Create div element for a checkbox
             let checkboxWrapper = document.createElement("div");
 
-            // Add a class to div element for css styling
+            // Add a class to div element for CSS styling
             checkboxWrapper.classList.add("checkbox-wrapper");
 
-            // Create checkbox input element with id, value, and class for css styling and later js parsing
+            // Create checkbox input element with id, value, and class for CSS styling and later JS parsing
             let checkbox = document.createElement("input");
             checkbox.type = "checkbox";
             checkbox.id = genre;
@@ -54,7 +45,7 @@ function loadMovieData() {
             let label = document.createElement("label");
             label.setAttribute("for", genre);
 
-            // Add text content for current genre
+            // Add text content for the current genre
             label.textContent = genre;
 
             // Append all created HTML elements to correct parent elements
@@ -79,19 +70,13 @@ function loadMovieData() {
 
         // Assign global variable after data is loaded
         window.filteredData = filterMovies();
-
-        // Process heatmap data
-        const heatmapData = heatmapDataResponse;
-
-        // Build heatmap
-        // Because of its static nature, we will call the function here instead of in the update dashboard function
-        buildHeatmap(heatmapData);
     })
-    // Add a condition to catch data fetching errors jsut in case
+    // Add a condition to catch data loading errors just in case
     .catch(error => {
-        console.error("Error fetching data:", error);
+        console.error("Error loading CSV file:", error);
     });
 }
+
 
 // Add custom color scale for charts and their custom names (Some are not the  real names of the colors)
 const colors = [
@@ -140,7 +125,7 @@ function filterMovies() {
 
 // BUILD ALL CHARTS 
 
-// Build Quinn's treemap
+// Build Top Movies treemap
 function buildTreemap(filteredData) {
 
     // Sort data by gross_ww in descending order for the top 50 movies
@@ -203,7 +188,6 @@ function buildTreemap(filteredData) {
         .attr("height", d => d.y1 - d.y0) 
         .attr("fill", (d, i) => colors[i % colors.length]); // Use the customized colors array to fill rectangles
         
-
     // Add the tooltip container
     d3.select("body").append("div")
         .attr("id", "tooltip")
@@ -231,7 +215,7 @@ function buildTreemap(filteredData) {
 }
 
 
-// Build Holly's fun facts
+// Build dynamic fun facts section
 // loop through the entire dataset to find the fun facts
 function updateFunFacts(filteredData) {
 
@@ -243,7 +227,7 @@ function updateFunFacts(filteredData) {
 
     // Check if the dataset is empty. If it is, add a message to the HTML element
     if (!filteredData.length) {
-        chart2Element.innerHTML = "<p>YOUR DATA IS BROKEN AGAIN NERD!</p>";
+        chart2Element.innerHTML = "<p>Oh no, Something broke!</p>";
         return;
     }
 
@@ -282,40 +266,6 @@ function updateFunFacts(filteredData) {
             <p><strong>${lowestBudget.title}</strong> had the lowest budget. They only had <strong>$${lowestBudget.budget}</strong> to work with</p>
             <br>
         </div>
-        <div class="static-facts_divider">
-            <p>________________________________________________________</p>
-        </div>
-        <div class="static_facts" "text-align:center";>
-            <p><strong>Wonder Nuggets</strong></p>
-            <br>
-        <div class="fact7">
-            <p>Disney turned down "Back to the Future" because they thought Marty had a bit of an Oedipus vibe with his mom.</p>
-            <br>
-        </div>
-        <div class="fact8">
-            <p> The tarantula from Home Alone was named Barry.</p>
-            <br>
-        </div>
-        <div class="fact9">
-            <p> The sound of the velociraptors communicating in Jurassic Park is actually the sound of tortoises mating.</p>
-            <br>
-        </div>
-        <div class="fact10">
-            <p> Katharine Hepburn holds the record for the most individual Oscar wins at 4 - all of them in the Best Actress category.</p>
-            <br>
-        </div>
-        <div class="fact11">
-            <p> Sylvester Stallone holds the record for the most Razzie awards with 12 wins and 40 nominations.</p>
-            <br>
-        </div>
-        <div class="fact12">
-            <p> There are 116 f-bombs in Deadpool & Wolverine.</p>
-            <br>
-        </div>
-        <div class="fact13">
-            <p><strong>Pulp Fiction</strong> had an $8 million budget and grossed over $200 million at the box office.</p>
-            <br>
-        </div>
     </div>
 `;
 
@@ -324,7 +274,7 @@ function updateFunFacts(filteredData) {
 }
 
 
-// Build Aditi's Bubble chart
+// Build Top Producction companies Bubble chart
 function buildBubbleChart(filteredData) {
 
     // Create an object to store the sum of gross_ww for each production company
@@ -338,8 +288,6 @@ function buildBubbleChart(filteredData) {
             let cleanedString = d.production_companies;
 
             // Check if the string is enclosed in backticks and remove them
-            // Might need to remove this section later, Brandon showed me the datastructure is differnet
-            // then what I thought
             if (cleanedString.startsWith('`') && cleanedString.endsWith('`')) {
                 cleanedString = cleanedString.slice(1, -1); // Remove backticks
             }
@@ -483,175 +431,139 @@ function buildBubbleChart(filteredData) {
 }
 
 
-// Build Nicholas' heatmap
-function calculateCorrelationMatrix(data, columns) {
-    function pearsonCorrelation(x, y) {
-        const meanX = d3.mean(x);
-        const meanY = d3.mean(y);
-        const numerator = d3.sum(x.map((xi, i) => (xi - meanX) * (y[i] - meanY)));
-        const denominator = Math.sqrt(
-            d3.sum(x.map(xi => Math.pow(xi - meanX, 2))) *
-            d3.sum(y.map(yi => Math.pow(yi - meanY, 2)))
-        );
-        return numerator / denominator;
-    }
+function buildStackedBar(filteredData) {
+    // Step 1: Calculate ROI for each movie
+    filteredData.forEach(d => {
+        d.roi = (d.gross_ww - d.budget) / d.budget;
+    });
 
-    const matrix = [];
-    for (let i = 0; i < columns.length; i++) {
-        for (let j = 0; j < columns.length; j++) {
-            const x = data.map(d => d[columns[i]]);
-            const y = data.map(d => d[columns[j]]);
-            matrix.push({
-                row: i,
-                col: j,
-                value: pearsonCorrelation(x, y)
-            });
-        }
-    }
-    return matrix;
-}
+    // Step 2: Get 5 low-budget, high-ROI movies
+    const lowBudgetHighROI = [...filteredData]
+        .sort((a, b) => a.budget - b.budget)
+        .slice(0, 20)
+        .sort((a, b) => b.roi - a.roi)
+        .slice(0, 5);
 
-// Function to build heatmap using D3
-function buildHeatmap(data) {
-    const margin = { top: 30, right: 30, bottom: 150, left: 125 };
+    // Step 3: Get 5 high-budget, low-ROI movies
+    const highBudgetLowROI = [...filteredData]
+        .sort((a, b) => b.budget - a.budget)
+        .slice(0, 20)
+        .sort((a, b) => a.roi - b.roi)
+        .slice(0, 5);
+
+    // Prepare combined dataset
+    const combinedData = [...lowBudgetHighROI, ...highBudgetLowROI];
+
+    // Step 4: Create a single chart inside #chart4
+    d3.select("#chart4").html(""); // Clear previous content
+
+    // Define dimensions
+    const margin = { top: 70, right: 20, bottom: 50, left: 150 };
     const width = 800 - margin.left - margin.right;
-    const height = 800 - margin.top - margin.bottom;
+    const height = 700 - margin.top - margin.bottom; // Updated height
 
-    // Define the columns you want to visualize
-    const columns = ["avg_rating_change", "budget_change", "gross_us_change", "gross_world_change", "nominations_change", "oscars_change", "votes_change"];
-    
-    // Calculate the correlation matrix
-    const heatmapData = calculateCorrelationMatrix(data, columns);
-
-    // Remove any existing heatmap
-    d3.select("#chart4").selectAll("svg").remove();
-
-    // Append new SVG element for heatmap
+    // Create SVG
     const svg = d3.select("#chart4")
         .append("svg")
         .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom + 50) // Extra space for the legend
+        .attr("height", height + margin.top + margin.bottom)
         .append("g")
-        .attr("transform", `translate(${margin.left},${margin.top})`);
+        .attr("transform", `translate(${margin.left}, ${margin.top})`);
 
-    const x = d3.scaleBand()
-        .range([0, width])
-        .domain(columns)
-        .padding(0.01);
+    // Define scales
+    const x = d3.scaleLinear()
+        .domain([0, d3.max(combinedData, d => d.budget + d.gross_ww)])
+        .nice()
+        .range([0, width]);
 
     const y = d3.scaleBand()
-        .range([height, 0])
-        .domain(columns)
-        .padding(0.01);
+        .domain(combinedData.map(d => d.title))
+        .range([0, height])
+        .padding(0.4);
 
-    // Define custom color interpolator for blue-white-red
-    const interpolateBuWeRd = t => {
-        if (t < 0.5) {
-            return d3.interpolateBlues(2 * (t - 0.5));
-        } else {
-            return d3.interpolateReds(2 * (t - 0.5));
-        }
-    };
-
-    const colorScale = d3.scaleSequential()
-        .interpolator(interpolateBuWeRd)
-        .domain([-1, 1]); // Correlation ranges from -1 to 1
-
-    // Create the SVG tooltip (outside the loop)
-    const tooltip = d3.select("body")
-        .append("div")
-        .style("position", "absolute")
-        .style("background", "white")
-        .style("border", "1px solid black")
-        .style("padding", "5px")
-        .style("border-radius", "5px")
-        .style("pointer-events", "none") // Prevent it from blocking mouse events
-        .style("display", "none");
-
-    // Draw heatmap cells
-    svg.selectAll()
-        .data(heatmapData)
-        .enter()
-        .append("rect")
-        .attr("x", d => x(columns[d.col]))
-        .attr("y", d => y(columns[d.row]))
-        .attr("width", x.bandwidth())
-        .attr("height", y.bandwidth())
-        .style("fill", d => colorScale(d.value))
-        .on("mouseover", (event, d) => {
-          tooltip
-            .style("display", "block")
-            .html(`<strong>Value:</strong> ${d.value.toFixed(2)}`)
-            .style("left", `${event.pageX + 10}px`)
-            .style("top", `${event.pageY + 10}px`);
-        })
-        .on("mousemove", (event) => {
-          tooltip
-            .style("left", `${event.pageX + 10}px`)
-            .style("top", `${event.pageY + 10}px`);
-        })
-        .on("mouseout", () => {
-          tooltip.style("display", "none");
-        });
-
-    // Add x-axis
+    // Append axes with formatted ticks and increased font size
     svg.append("g")
         .attr("transform", `translate(0, ${height})`)
-        .call(d3.axisBottom(x))
+        .call(d3.axisBottom(x).ticks(5).tickFormat(d3.format(".2s")))
         .selectAll("text")
-        .style("text-anchor", "end")
-        .attr("transform", "rotate(-45)");
+        .style("font-size", "16px") // Increased font size for x-axis
+        .style("font-weight", "bold");
 
-    // Add y-axis
     svg.append("g")
-        .call(d3.axisLeft(y));
+        .call(d3.axisLeft(y))
+        .selectAll("text")
+        .style("font-size", "18px") // Increased font size for y-axis
+        .style("font-weight", "bold");
 
-    // --- Add Legend ---
-    const legendWidth = 300;
-    const legendHeight = 20;
+    // Add x-axis label
+    svg.append("text")
+        .attr("x", width / 2)
+        .attr("y", height + 40)
+        .attr("text-anchor", "middle")
+        .style("font-size", "16px")
+        .text("Budget and Gross WW");
 
-    // Append a group for the legend
-    const legend = svg.append("g")
-        .attr("transform", `translate(${(width - legendWidth) / 2}, ${height + 90})`);
-
-    // Create a gradient for the legend
-    const defs = svg.append("defs");
-    const linearGradient = defs.append("linearGradient")
-        .attr("id", "heatmap-gradient");
-
-    linearGradient.append("stop")
-        .attr("offset", "0%")
-        .attr("stop-color", "#000435");
-
-    linearGradient.append("stop")
-        .attr("offset", "50%")
-        .attr("stop-color", "white");
-
-    linearGradient.append("stop")
-        .attr("offset", "100%")
-        .attr("stop-color", "#610000");
-
-    // Draw the rectangle for the legend
-    legend.append("rect")
+    // Budget bars (Purple)
+    svg.selectAll(".bar-budget")
+        .data(combinedData)
+        .enter()
+        .append("rect")
+        .attr("class", "bar-budget")
+        .attr("y", d => y(d.title))
+        .attr("height", y.bandwidth())
         .attr("x", 0)
+        .attr("width", d => Math.max(x(d.budget), 5))
+        .attr("fill", "purple");
+
+    // Gross WW bars (Orange)
+    svg.selectAll(".bar-gross")
+        .data(combinedData)
+        .enter()
+        .append("rect")
+        .attr("class", "bar-gross")
+        .attr("y", d => y(d.title))
+        .attr("height", y.bandwidth())
+        .attr("x", d => Math.max(x(d.budget), 5))
+        .attr("width", d => Math.max(x(d.gross_ww), 5))
+        .attr("fill", "#ff7f0e");
+
+    // Step 5: Add a legend at the top
+    const legend = svg.append("g")
+        .attr("transform", `translate(0, -30)`) // Position above the charts
+        .attr("text-align", "center");
+
+    // Add rectangle for budget
+    legend.append("rect")
+        .attr("x", 10)
         .attr("y", 0)
-        .attr("width", legendWidth)
-        .attr("height", legendHeight)
-        .style("fill", "url(#heatmap-gradient)");
+        .attr("width", 20)
+        .attr("height", 20)
+        .style("fill", "purple");
 
-    // Add legend axis
-    const legendScale = d3.scaleLinear()
-        .domain([-1, 1]) // Match the colorScale domain
-        .range([0, legendWidth]);
+    // Add text for budget
+    legend.append("text")
+        .attr("x", 35)
+        .attr("y", 15)
+        .text("Budget")
+        .style("font-size", "14px"); // Increased font size for legend
 
-    const legendAxis = d3.axisBottom(legendScale)
-        .ticks(5)
-        .tickFormat(d3.format(".1f"));
+    // Add rectangle for gross
+    legend.append("rect")
+        .attr("x", 120)
+        .attr("y", 0)
+        .attr("width", 20)
+        .attr("height", 20)
+        .style("fill", "#ff7f0e");
 
-    legend.append("g")
-        .attr("transform", `translate(0, ${legendHeight})`)
-        .call(legendAxis);
+    // Add text for gross
+    legend.append("text")
+        .attr("x", 145)
+        .attr("y", 15)
+        .text("Gross World Wide Earnings")
+        .style("font-size", "14px"); // Increased font size for legend
 }
+
+
 
 // Create a function to update all dynamic charts when called
 function updateDashboard() {
@@ -660,6 +572,7 @@ function updateDashboard() {
     buildTreemap(filteredData);
     updateFunFacts(filteredData);
     buildBubbleChart(filteredData);
+    buildStackedBar(filteredData);
 }
 
 // Load movie data and initialize dashboard
