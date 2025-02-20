@@ -430,37 +430,24 @@ function buildBubbleChart(filteredData) {
         .text(d => d.data.key);  
 }
 
-
 function buildStackedBar(filteredData) {
-    // Step 1: Calculate ROI for each movie
+    // Compute return multiplier
     filteredData.forEach(d => {
-        d.roi = (d.gross_ww - d.budget) / d.budget;
+        d.returnMultiplier = d.gross_ww / d.budget;
     });
 
-    // Step 2: Get 5 low-budget, high-ROI movies
-    const lowBudgetHighROI = [...filteredData]
-        .sort((a, b) => a.budget - b.budget)
-        .slice(0, 20)
-        .sort((a, b) => b.roi - a.roi)
-        .slice(0, 5);
+    // Get the top 10 movies by return multiplier
+    const topMovies = [...filteredData]
+        .sort((a, b) => b.returnMultiplier - a.returnMultiplier)
+        .slice(0, 10);
 
-    // Step 3: Get 5 high-budget, low-ROI movies
-    const highBudgetLowROI = [...filteredData]
-        .sort((a, b) => b.budget - a.budget)
-        .slice(0, 20)
-        .sort((a, b) => a.roi - b.roi)
-        .slice(0, 5);
+    // Clear previous chart
+    d3.select("#chart4").html("");
 
-    // Prepare combined dataset
-    const combinedData = [...lowBudgetHighROI, ...highBudgetLowROI];
-
-    // Step 4: Create a single chart inside #chart4
-    d3.select("#chart4").html(""); // Clear previous content
-
-    // Define dimensions
-    const margin = { top: 70, right: 20, bottom: 50, left: 150 };
-    const width = 800 - margin.left - margin.right;
-    const height = 700 - margin.top - margin.bottom; // Updated height
+    // Set dimensions
+    let margin = { top: 50, right: 250, bottom: 50, left: 150 };
+    let width = 800 - margin.left - margin.right;
+    let height = 600 - margin.top - margin.bottom;
 
     // Create SVG
     const svg = d3.select("#chart4")
@@ -470,99 +457,109 @@ function buildStackedBar(filteredData) {
         .append("g")
         .attr("transform", `translate(${margin.left}, ${margin.top})`);
 
-    // Define scales
-    const x = d3.scaleLinear()
-        .domain([0, d3.max(combinedData, d => d.budget + d.gross_ww)])
+    // Define scales (Initial: Budget only)
+    let x = d3.scaleLinear()
+        .domain([0, d3.max(topMovies, d => d.budget)])
         .nice()
         .range([0, width]);
 
-    const y = d3.scaleBand()
-        .domain(combinedData.map(d => d.title))
+    let y = d3.scaleBand()
+        .domain(topMovies.map(d => d.title))
         .range([0, height])
         .padding(0.4);
 
-    // Append axes with formatted ticks and increased font size
-    svg.append("g")
+    // Append x-axis
+    let xAxis = svg.append("g")
+        .attr("class", "x-axis")
         .attr("transform", `translate(0, ${height})`)
-        .call(d3.axisBottom(x).ticks(5).tickFormat(d3.format(".2s")))
-        .selectAll("text")
-        .style("font-size", "16px") // Increased font size for x-axis
-        .style("font-weight", "bold");
+        .call(d3.axisBottom(x).ticks(5).tickFormat(d3.format(".2s")));
 
-    svg.append("g")
-        .call(d3.axisLeft(y))
-        .selectAll("text")
-        .style("font-size", "18px") // Increased font size for y-axis
-        .style("font-weight", "bold");
+    // Append y-axis
+    let yAxis = svg.append("g")
+        .attr("class", "y-axis")
+        .call(d3.axisLeft(y));
 
-    // Add x-axis label
-    svg.append("text")
-        .attr("x", width / 2)
-        .attr("y", height + 40)
-        .attr("text-anchor", "middle")
-        .style("font-size", "16px")
-        .text("Budget and Gross WW");
-
-    // Budget bars (Purple)
-    svg.selectAll(".bar-budget")
-        .data(combinedData)
+    // Append budget bars (Initial State)
+    const budgetBars = svg.selectAll(".bar-budget")
+        .data(topMovies)
         .enter()
         .append("rect")
         .attr("class", "bar-budget")
         .attr("y", d => y(d.title))
         .attr("height", y.bandwidth())
         .attr("x", 0)
-        .attr("width", d => Math.max(x(d.budget), 5))
+        .attr("width", d => x(d.budget))
         .attr("fill", "purple");
 
-    // Gross WW bars (Orange)
-    svg.selectAll(".bar-gross")
-        .data(combinedData)
+    // Append return multiplier text
+    const textLabels = svg.selectAll(".text-labels")
+        .data(topMovies)
         .enter()
-        .append("rect")
-        .attr("class", "bar-gross")
-        .attr("y", d => y(d.title))
-        .attr("height", y.bandwidth())
-        .attr("x", d => Math.max(x(d.budget), 5))
-        .attr("width", d => Math.max(x(d.gross_ww), 5))
-        .attr("fill", "#ff7f0e");
+        .append("text")
+        .attr("class", "text-labels")
+        .attr("x", d => x(d.budget) + 10) // Initially aligned with budget bars
+        .attr("y", d => y(d.title) + y.bandwidth() / 2)
+        .attr("alignment-baseline", "middle")
+        .text(d => `${d.returnMultiplier.toFixed(1)}x`)
+        .style("font-size", "16px")
+        .style("font-weight", "bold");
 
-    // Step 5: Add a legend at the top
-    const legend = svg.append("g")
-        .attr("transform", `translate(0, -30)`) // Position above the charts
-        .attr("text-align", "center");
+    // Add "Compare" button
+    d3.select("#chart4")
+        .append("button")
+        .attr("id", "compareButton")
+        .text("Compare")
+        .style("display", "block")
+        .style("margin", "20px auto")
+        .style("font-size", "16px")
+        .style("padding", "10px 20px")
+        .style("cursor", "pointer")
+        .on("click", function () {
+            let isExpanded = x.domain()[1] > d3.max(topMovies, d => d.budget);
 
-    // Add rectangle for budget
-    legend.append("rect")
-        .attr("x", 10)
-        .attr("y", 0)
-        .attr("width", 20)
-        .attr("height", 20)
-        .style("fill", "purple");
+            if (!isExpanded) {
+                // Expand x-axis to fit gross earnings
+                x.domain([0, d3.max(topMovies, d => d.gross_ww)]).nice();
 
-    // Add text for budget
-    legend.append("text")
-        .attr("x", 35)
-        .attr("y", 15)
-        .text("Budget")
-        .style("font-size", "14px"); // Increased font size for legend
+                // Transition x-axis
+                svg.select(".x-axis")
+                    .transition()
+                    .duration(3000)
+                    .call(d3.axisBottom(x).ticks(5).tickFormat(d3.format(".2s")));
 
-    // Add rectangle for gross
-    legend.append("rect")
-        .attr("x", 120)
-        .attr("y", 0)
-        .attr("width", 20)
-        .attr("height", 20)
-        .style("fill", "#ff7f0e");
+                // Transition bars to show gross earnings
+                budgetBars.transition()
+                    .duration(3000)
+                    .attr("width", d => x(d.gross_ww))
+                    .attr("fill", "green");
 
-    // Add text for gross
-    legend.append("text")
-        .attr("x", 145)
-        .attr("y", 15)
-        .text("Gross World Wide Earnings")
-        .style("font-size", "14px"); // Increased font size for legend
+                // Adjust text label positioning
+                textLabels.transition()
+                    .duration(3000)
+                    .attr("x", d => x(d.gross_ww) + 10);
+            } else {
+                // Collapse back to budget view
+                x.domain([0, d3.max(topMovies, d => d.budget)]).nice();
+
+                // Transition x-axis back
+                svg.select(".x-axis")
+                    .transition()
+                    .duration(3000)
+                    .call(d3.axisBottom(x).ticks(5).tickFormat(d3.format(".2s")));
+
+                // Shrink bars back to budget size
+                budgetBars.transition()
+                    .duration(3000)
+                    .attr("width", d => x(d.budget))
+                    .attr("fill", "purple");
+
+                // Reset text label position
+                textLabels.transition()
+                    .duration(3000)
+                    .attr("x", d => x(d.budget) + 10);
+            }
+        });
 }
-
 
 
 // Create a function to update all dynamic charts when called
